@@ -1,14 +1,48 @@
+from openai import OpenAI
+from dotenv import load_dotenv
+
+import os
+import json
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("OPENAI_KEY")
+)
+
 def parse_claims(claim_text: str):
 
-    parts = claim_text.split(";")
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+Break this patent claim into discrete claim elements.
 
-    elements = []
+Return valid JSON only.
 
-    for idx, part in enumerate(parts):
+Format:
+{
+  "elements": [
+    {
+      "element_id": "1a",
+      "text": "..."
+    }
+  ]
+}
+"""
+            },
+            {
+                "role": "user",
+                "content": claim_text
+            }
+        ],
+        response_format={"type": "json_object"}
+    )
 
-        elements.append({
-            "element_id": f"1{chr(97 + idx)}",
-            "text": part.strip()
-        })
+    content = response.choices[0].message.content
 
-    return elements
+    parsed = json.loads(content)
+
+    return parsed["elements"]
